@@ -40,6 +40,16 @@ do-checkout() {
             fi
     })
 }
+do-singlepage-generation() {
+    if test $# -lt 1 ; then
+        echo "Expect <repo>"
+        return
+    fi
+    as=$1
+    (cd ,,$as && {
+            ../build-singlepage-lesson.sh
+    })
+}
 do-check-justmerged() {
     if test $# -lt 2 ; then
         echo "Expect <repo> <pr>"
@@ -372,3 +382,55 @@ custom4() {
         READ=echo PUSH=echo clone-branch-build-commit $i v5.3 2015.08
     done
 }
+
+# test generation of single pages, 2016.06
+custom-singlepages-1() {
+    WIPSKIP=echo
+    local odir=swc-single-page/
+    rm -rf "./$odir"
+    mkdir -p $odir
+    local o=$odir/index.html
+    cat <<EOF > $o
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>SWC Lessons: Single Page Versions</title>
+    <link rel="stylesheet" href="picnic.min.css">
+  </head>
+  <body style="margin: 0 2em;">
+    <p>NB: <tt>-zoom</tt> versions are designed for ebook reading (4:3 aspect ratio).</p>
+    <p>NB: <tt>-browser</tt> versions include all styling.</p>
+    <p>NB: <tt>.epub</tt> versions are ebooks with almost no styling.</p>
+EOF
+    for i in git-novice hg-novice make-novice matlab-novice-inflammation python-novice-inflammation r-novice-gapminder r-novice-inflammation shell-novice sql-novice-survey lesson-example ; do
+
+        v=gh-pages
+        test -d ,,$i || do-clone $i # lazy clone during tuning
+
+        $WIPSKIP do-checkout $i $v
+        $WIPSKIP do-singlepage-generation $i
+
+        echo "    <h3>$i</h3>" >> $o
+        echo "    <ul>" >> $o
+        local d=,,$i
+        cp -r $d/_site $odir/$i
+        (cd $odir/$i && {
+                for j in single-page*.{pdf,epub,html} ; do
+                    mv $j $i${j#single-page}
+                    echo "      <li><a href='$i/$i${j#single-page}'>$i${j#single-page}</a></li>" >> ../../$o
+                done
+                cd -
+            } || cd -)
+        echo "    </ul>" >> $o
+    done
+    test -f stats.code && cat stats.code >> $o
+    echo '  </body>' >> $o
+    echo '</html>' >> $o
+
+    if [[ "$DL" != "" ]] ; then
+        wget https://raw.githubusercontent.com/picnicss/picnic/master/picnic.min.css -O $odir/picnic.min.css
+        $WIPSKIP rsync -avzu $odir $DL/$odir
+    fi
+}
+
