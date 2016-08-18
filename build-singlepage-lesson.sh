@@ -119,14 +119,24 @@ __html-to-epub() {
 }
 
 __html-to-pdf() {
-    (cd _site && pandoc --filter=pandoc-svg.py --standalone -o single-page.tex single-page.html)
+    (cd _site && pandoc --standalone \
+                        --filter=pandoc-svg.py \
+                        --variable geometry=margin=0.5in \
+                        --variable papersize=a4 \
+                        -o single-page.tex single-page.html)
+    (cd _site && pandoc --standalone \
+                        --filter=pandoc-svg.py \
+                        --variable geometry=margin=5mm \
+                        --variable papersize=a5 \
+                        -o single-page-zoom.tex single-page.html)
     sed -i \
         -e 's@\\subsection@\\textbf@g' \
-        _site/single-page.tex
+        _site/single-page.tex _site/single-page-zoom.tex
     (cd _site && pdflatex single-page.tex)
+    (cd _site && pdflatex single-page-zoom.tex)
 }
 
-__html-to-pdf-webkit() {
+__html-to-pdf-browser() {
     local SV=http://localhost:18000/
     cd _site
     python3 -m http.server 18000 &
@@ -134,7 +144,8 @@ __html-to-pdf-webkit() {
     cd -
     echo "Should: kill $toKill"
     #--title 
-    wkhtmltopdf -s A5 --user-style-sheet css/custom-hide.css ${SV}/single-page.html _site/single-page-browser.pdf
+    wkhtmltopdf -s A4 --user-style-sheet css/custom-hide.css ${SV}/single-page.html _site/single-page-browser.pdf
+    wkhtmltopdf -s A6 --user-style-sheet css/custom-hide.css ${SV}/single-page.html _site/single-page-browser-zoom.pdf
     # ./pdf--smaller.sh single-page-browser.pdf single-page-browser-smaller.pdf
     echo "now stopping the python web server: $toKill"
     kill $toKill
@@ -143,7 +154,7 @@ __html-to-pdf-webkit() {
 __reporting() {
     echo "The following might be of interest:"
     shopt -s nullglob # ignore wildcard that don't work below
-    ls -1l _*site/single-page{,-browser}.{html,epub,pdf}
+    ls -1l _*site/single-page.{html,epub,pdf} _site/single-page*.pdf
     shopt -u nullglob
 }
 
@@ -181,7 +192,7 @@ else
     go html-to-pdf
     
     ### generate single-page pdf with a browser
-    go html-to-pdf-webkit
+    go html-to-pdf-browser
     
     ### reporting
     go reporting
