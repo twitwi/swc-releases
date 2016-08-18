@@ -111,7 +111,15 @@ __patch-generated() {
 
 __python-preview() {
     (sleep 1 ; firefox http://localhost:8000/single-page.html) &
-    (cd _site && python3 -m http.server)
+    (cd _site && python3 -m http.server 18007)
+}
+
+__python-preview-kill() {
+    if ps aux | grep 'http[.]server 1800[07]' ; then
+        ps aux | grep 'http[.]server 1800[07]' | awk '{print $2}' | xargs kill
+    else
+        echo "Nothing found to kill"
+    fi
 }
 
 __html-to-epub() {
@@ -119,24 +127,27 @@ __html-to-epub() {
 }
 
 __html-to-pdf() {
+    local suffix=$1
+    local margin=$2
+    local format=$3
     (cd _site && pandoc --standalone \
                         --filter=pandoc-svg.py \
-                        --variable geometry=margin=0.5in \
-                        --variable papersize=a4 \
-                        -o single-page.tex single-page.html)
-    (cd _site && pandoc --standalone \
-                        --filter=pandoc-svg.py \
-                        --variable geometry=margin=5mm \
-                        --variable papersize=a5 \
-                        -o single-page-zoom.tex single-page.html)
+                        --variable geometry=margin=$margin \
+                        --variable ${format} \
+                        -o single-page${suffix}.tex single-page.html)
+#                        --variable geometry=paperwidth=105mm \
+#                        --variable geometry=paperheight=105mm \
+#                        --variable papersize=$format \
     sed -i \
         -e 's@\\subsection@\\textbf@g' \
-        _site/single-page.tex _site/single-page-zoom.tex
-    (cd _site && pdflatex single-page.tex)
-    (cd _site && pdflatex single-page-zoom.tex)
+        _site/single-page${suffix}.tex
+    (cd _site && pdflatex single-page${suffix}.tex)
 }
 
 __html-to-pdf-browser() {
+    __python-preview-kill
+    local suffix=$1
+    shift
     local SV=http://localhost:18000/
     cd _site
     python3 -m http.server 18000 &
@@ -144,8 +155,8 @@ __html-to-pdf-browser() {
     cd -
     echo "Should: kill $toKill"
     #--title 
-    wkhtmltopdf -s A4 --user-style-sheet css/custom-hide.css ${SV}/single-page.html _site/single-page-browser.pdf
-    wkhtmltopdf -s A6 --user-style-sheet css/custom-hide.css ${SV}/single-page.html _site/single-page-browser-zoom.pdf
+    wkhtmltopdf "$@" --user-style-sheet css/custom-hide.css ${SV}/single-page.html _site/single-page${suffix}.pdf
+    #wkhtmltopdf -s A6 --user-style-sheet css/custom-hide.css ${SV}/single-page.html _site/single-page-browser-zoom.pdf
     # ./pdf--smaller.sh single-page-browser.pdf single-page-browser-smaller.pdf
     echo "now stopping the python web server: $toKill"
     kill $toKill
@@ -154,7 +165,7 @@ __html-to-pdf-browser() {
 __reporting() {
     echo "The following might be of interest:"
     shopt -s nullglob # ignore wildcard that don't work below
-    ls -1l _*site/single-page.{html,epub,pdf} _site/single-page*.pdf
+    ls -1l _*site/single-page.{html,epub,pdf} _site/single-page*.pdf | sort | uniq
     shopt -u nullglob
 }
 
@@ -189,10 +200,12 @@ else
     
     ### generate single-page pdf
     go gen-pandoc-svg
-    go html-to-pdf
+    go html-to-pdf ''    0.5in papersize=a4
+    go html-to-pdf -zoom 5mm geometry=paperwidth=120mm,paperheight=160mm
     
     ### generate single-page pdf with a browser
-    go html-to-pdf-browser
+    go html-to-pdf-browser -browser      -s A4
+    go html-to-pdf-browser -browser-zoom --page-width 105mm --page-height 140mm
     
     ### reporting
     go reporting
