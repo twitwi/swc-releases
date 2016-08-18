@@ -64,6 +64,26 @@ When run, `make 2016.06` will run `make-or-update-release.sh` that will do the f
 
 
 
+# About lessons using R (and RMarkdown in .rmd files)
+
+One need to install R and some packages to build the lessons.
+
+Installing R is platform dependent, e.g., under some linux distributions you can use `apt-get install r-base`.
+
+One can then install the necessary packages by starting R and running:
+
+    install.packages("knitr")
+    install.packages("tidyr")
+    install.packages("dplyr")
+    install.packages("plyr")
+    install.packages("DiagrammeR")
+    install.packages("ggplot2")
+    install.packages("devtools")
+    install.packages("roxygen2")
+    install.packages("checkpoint")
+
+
+
 # Troubleshooting and help when having to do a release multiple times
 
 ## help with preparing lessons
@@ -80,6 +100,7 @@ In case the preparation process needs to be re-run, for instance because the bui
 - IMPORTANT: also `rm -rf .git/modules/2016.06` to remove the submodule cache, in case some content has been force pushed to the lessons
 - `git rebase -i HEAD^^` and later `git push --force` to rewrite history with a new version
 - `make update-submodules` after uncommenting the necessary line in the Makefile: to update the submodules if new commits have been added to the 2016.06 branches in any lesson repository (need to then add/commit/push)
+
 
 
 
@@ -171,3 +192,6 @@ And finally push:
     git push
 
 After letting some time to github to rebuild the site, you should see the release at <http://swcarpentry.github.io/swc-releases/2016.06-beta/> and each lessons should "work" and have a small banner with the version.
+
+
+
