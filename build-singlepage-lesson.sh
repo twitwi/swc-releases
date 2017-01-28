@@ -2,6 +2,8 @@
 
 W=$(dirname $(readlink -f $0))
 
+TITLE="Complete Lesson"
+
 __build-site() {
     make site
 }
@@ -9,7 +11,7 @@ __build-site() {
 __gen-single-page-md() {
     cat <<EOF > single-page.md
 ---
-title: Complete Lesson
+title: "$TITLE"
 layout: base
 ---
 
@@ -183,12 +185,7 @@ set -e
 echo "Checking for _episodes in the current directory."
 test -d _episodes
 
-
-if [[ $# -gt 0 ]] ; then
-    for i in "$@"; do
-        go $i
-    done
-else
+__default() {
     ### generate single-page html 
     go gen-single-page-md
     go build-site
@@ -197,16 +194,36 @@ else
     
     ### generate single-page epub
     go html-to-epub
-    
-    ### generate single-page pdf
+
     go gen-pandoc-svg
+    go default_pdfs
+    
+    ### reporting
+    go reporting
+}
+
+__default_pdfs() {
+    ### generate single-page pdf
     go html-to-pdf ''    0.5in papersize=a4
     go html-to-pdf -zoom 5mm geometry=paperwidth=120mm,paperheight=160mm
     
     ### generate single-page pdf with a browser
     go html-to-pdf-browser -browser      -s A4
     go html-to-pdf-browser -browser-zoom --page-width 105mm --page-height 140mm
-    
-    ### reporting
-    go reporting
+}
+
+echo CFG IS '!!!!!!!!!!!!' $CFG '!!!!!!!!!!!!!!!!!!'
+# maybe load a file that can override some variables, or targets, or define new ones, etc
+if [ -f "$CFG" ] ; then
+    echo CFG IS '!!!!!!!!!!!!' $CFG '!!!!!!!!!!!!!!!!!!'
+    source "$CFG"
+fi
+
+# execute the passed-in commands, or "default"
+if [[ $# -gt 0 ]] ; then
+    for i in "$@"; do
+        go $i
+    done
+else
+    go default
 fi
